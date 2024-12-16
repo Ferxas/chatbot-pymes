@@ -56,24 +56,26 @@ class PredictionsResource(Resource):
         """
         Ingresa documentos PDF desde un directorio y actualiza el índice FAISS.
         """
-        for pdf_file in os.listdir(pdf_dir):
-            if pdf_file.endswith(".pdf"):
-                file_path = os.path.join(pdf_dir, pdf_file)
-                with open(file_path, "rb") as f:
-                    pdf_reader = PyPDF2.PdfReader(f)
-                    # Extraer texto de todas las páginas
-                    text = ""
-                    for page in pdf_reader.pages:
-                        text += page.extract_text()
+        pdf_files = [f for f in os.listdir(pdf_dir) if f.endswith(".pdf")]
+        if not pdf_files:
+            raise Exception(f"No se encontraron archivos PDF en la carpeta '{pdf_dir}'.")
 
-                    # Dividir el texto en fragmentos más pequeños
-                    fragments = self._split_text_into_chunks(text)
-                    for fragment in fragments:
-                        embedding = self._embed_text(fragment)
-                        self.faiss_index.add(
-                            np.array([embedding]).astype("float32"))
-                        self.documents.append(
-                            {"content": fragment, "source": pdf_file})
+        for pdf_file in pdf_files:
+            file_path = os.path.join(pdf_dir, pdf_file)
+            with open(file_path, "rb") as f:
+                pdf_reader = PyPDF2.PdfReader(f)
+                # Extraer texto de todas las páginas
+                text = ""
+                for page in pdf_reader.pages:
+                    text += page.extract_text()
+
+                # Dividir el texto en fragmentos más pequeños
+                fragments = self._split_text_into_chunks(text)
+                for fragment in fragments:
+                    embedding = self._embed_text(fragment)
+                    self.faiss_index.add(np.array([embedding]).astype("float32"))
+                    self.documents.append({"content": fragment, "source": pdf_file})
+
 
     def _split_text_into_chunks(self, text, chunk_size=500):
         """
@@ -95,16 +97,27 @@ class PredictionsResource(Resource):
             response = self._generate_rag_answer(query, relevant_docs)
             return {"response": response}, 200
         except Exception as e:
+            # Capturar y devolver errores específicos
             return {"error": str(e)}, 500
 
+
     def _retrieve_relevant_documents(self, query):
+        # Validar si FAISS tiene datos
+        if self.faiss_index.ntotal == 0:
+            raise Exception("El índice FAISS está vacío. No se han cargado documentos.")
+
         # Obtener embedding de la consulta
         query_embedding = np.array([self._embed_text(query)]).astype("float32")
 
         # Buscar los documentos más cercanos
-        distances, indices = self.faiss_index.search(
-            query_embedding, k=3)  # Top 3 documentos relevantes
-        relevant_docs = [self.documents[i]["content"] for i in indices[0]]
+        distances, indices = self.faiss_index.search(query_embedding, k=3)  # Top 3 documentos relevantes
+
+        # Validar que se encontraron documentos relevantes
+        if len(indices[0]) == 0 or indices[0][0] == -1:
+            raise Exception("No se encontraron documentos relevantes para la consulta.")
+
+        # Recuperar documentos relevantes
+        relevant_docs = [self.documents[i]["content"] for i in indices[0] if i != -1]
         return relevant_docs
 
     def _generate_rag_answer(self, query, relevant_docs):
