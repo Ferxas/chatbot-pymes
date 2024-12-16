@@ -9,8 +9,17 @@
 		{
 			"name": "foda",
 			"request": {
-				"method": "GET",
+				"method": "POST",
 				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"business_data\": {\r\n        \"industry\": \"retail\",\r\n        \"product\": \"ropa deportiva\",\r\n        \"target_market\": \"jóvenes de 18-35\",\r\n        \"challenges\": \"competencia alta en el mercado online\"\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
 				"url": {
 					"raw": "localhost:5000/api/foda",
 					"host": [
@@ -32,7 +41,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n      \"query\": \"¿Cómo han sido las ventas este trimestre?\"\r\n}",
+					"raw": "{\r\n      \"query\": \"¿Qué estrategias pueden adoptar las PYME para superar las barreras en la implementación de inteligencia artificial y aprovechar sus beneficios?\"\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -60,7 +69,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"business_data\": {\r\n        \"industry\": \"retail\",\r\n        \"product\": \"e-commerce platform\"\r\n    },\r\n    \"goal\": \"increase sales\"\r\n}",
+					"raw": "{\r\n    \"business_data\": {\r\n        \"industry\": \"retail\",\r\n        \"product\": \"ropa deportiva\",\r\n        \"target_market\": \"Jóvenes de 18-35 años\"\r\n    },\r\n    \"goal\": \"Incrementar las ventas en un 20% este trimestre\"\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
