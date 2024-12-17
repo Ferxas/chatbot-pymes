@@ -1,41 +1,33 @@
-from flask_restful import Resource, reqparse
-import openai
-import os
+import json
 
+# Rutas completas de los archivos
+archivos = [
+    "C:/Users/Usuario/Desktop/Escritorio/botcamp_ia/master/chatbot-pymes/backend/app/routes/foda.py",
+    "C:/Users/Usuario/Desktop/Escritorio/botcamp_ia/master/chatbot-pymes/backend/app/routes/marketing.py",
+    "C:/Users/Usuario/Desktop/Escritorio/botcamp_ia/master/chatbot-pymes/backend/app/routes/predictions.py",
+    "C:/Users/Usuario/Desktop/Escritorio/botcamp_ia/master/chatbot-pymes/backend/app/data/QA.json"
+]
 
-class MarketingResource(Resource):
-    def __init__(self):
+# Archivo de salida consolidado
+archivo_salida = "C:/Users/Usuario/Desktop/Escritorio/botcamp_ia/master/chatbot-pymes/backend/app/routes/consolidado.py"
 
-        self.parser = reqparse.RequestParser()
-        self.parser.add_argument("business_data", type=dict, location="json",
-                                 required=True, help="Business data is required")
-        self.parser.add_argument(
-            "goal", type=str, location="json", required=True, help="Goal is required")
+# Crear archivo consolidado
+with open(archivo_salida, "w", encoding="utf-8") as salida:
+    salida.write("# Archivo Consolidado\n\n")
+    
+    # Añadir los scripts Python
+    for archivo in archivos[:-1]:  # Excluye QA.json por ahora
+        with open(archivo, "r", encoding="utf-8") as f:
+            salida.write(f"# Contenido de {archivo}\n")
+            salida.write(f.read())
+            salida.write("\n\n")
+    
+    # Añadir el archivo JSON como variable de Python
+    salida.write("# Contenido de QA.json\n")
+    with open(archivos[-1], "r", encoding="utf-8") as f:
+        qa_data = json.load(f)
+        salida.write("qa_data = ")
+        json.dump(qa_data, salida, indent=4, ensure_ascii=False)
 
-    def post(self):
+print(f"Archivo consolidado creado: {archivo_salida}")
 
-        args = self.parser.parse_args()
-        business_data = args["business_data"]
-        goal = args["goal"]
-
-        # basic example or funcitonality
-        try:
-            response = self.generate_marketing_strategy(business_data, goal)
-            return {"strategies": response}, 200
-        except Exception as e:
-            return {"error": str(e)}, 500
-
-    def generate_marketing_strategy(self, business_data, goal):
-        
-        prompt = (
-            f"Eres un asistente experto en marketing para PYMEs. Basándote en la información de contexto proporcionada, ofrece estrategias efectivas, análisis de mercado y recomendaciones personalizadas que permitan a las pequeñas y medianas empresas mejorar su visibilidad, atraer y retener clientes, optimizar sus campañas publicitarias y aprovechar herramientas digitales, como el análisis de datos y la inteligencia artificial, para lograr un crecimiento sostenible en un entorno competitivo."
-        )
-        
-        response = openai.completions.create(
-            prompt=prompt,
-            temperature=0.9,
-            max_tokens=100,
-            model="gpt-3.5-turbo-instruct"
-        )
-        
-        return response.choices[0].text.strip() 
