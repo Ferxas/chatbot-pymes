@@ -33,7 +33,7 @@ except Exception as e:
 # Probar el modelo fine-tuneado (reemplaza con tu modelo entrenado)
 print("\nProbando el modelo fine-tuneado...")
 try:
-    response = openai.Completion.create(
+    response = openai.completions.create(
         model="ftjob-jWoP7IiKGiPoDuzx0nOpGPoB",  # Reemplaza con tu ID de modelo
         prompt="¿Cuál es el papel de las PYME en la economía de España?",
         max_tokens=100

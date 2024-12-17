@@ -39,7 +39,7 @@ class FODAResource(Resource):
             "Por favor, proporciona el análisis en formato estructurado con cada sección claramente identificada."
         )
 
-        response = openai.ChatCompletion.create(
+        response = openai.chat.completions.create(
             model="gpt-3.5-turbo",  # Modelo correcto para completions basadas en chat
             messages=[
                 {"role": "system", "content": "Eres un asistente experto en consultoría empresarial para PYMEs."},
