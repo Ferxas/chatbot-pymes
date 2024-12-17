@@ -121,7 +121,7 @@ class PredictionsResource(Resource):
         )
 
         response = openai.completions.create(
-            model="",  # Reemplazar con el ID de tu modelo fine-tuneado
+            model="ftjob-9VK4dcQZWuf7ra6oR878UkOk",  # Reemplazar con el ID de tu modelo fine-tuneado
             prompt=prompt,
             max_tokens=300,
             temperature=0.7
