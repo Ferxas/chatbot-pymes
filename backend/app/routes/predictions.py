@@ -1,11 +1,9 @@
 from flask_restful import Resource, reqparse
 from sentence_transformers import SentenceTransformer
-from transformers import pipeline
 import faiss
 import numpy as np
 import os
 import openai
-import PyPDF2
 
 
 class PredictionsResource(Resource):
@@ -13,11 +11,11 @@ class PredictionsResource(Resource):
         # Parser para manejar datos de entrada
         self.parser = reqparse.RequestParser()
         self.parser.add_argument(
-            "query", type=str, location="json", required=True, help="Query is required.")
+            "query", type=str, location="json", required=True, help="Query is required."
+        )
 
         # Modelo para embeddings (FAISS)
-        self.embedding_model = SentenceTransformer(
-            "sentence-transformers/all-MiniLM-L6-v2")
+        self.embedding_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
         # Configuración de FAISS para búsquedas rápidas
         self.faiss_index = self._initialize_faiss_index()
@@ -26,22 +24,19 @@ class PredictionsResource(Resource):
         # Configuración para OpenAI y fine-tuning
         openai.api_key = os.getenv("OPENAI_API_KEY")
 
-        # Directorio de PDFs
-        self.pdf_dir = os.path.join("data", "pdf")
-        self._ensure_pdf_directory()
-        self._ingest_pdf_documents(self.pdf_dir)
+        # Ruta absoluta al directorio de archivos .txt
+        self.text_dir = os.path.abspath(os.path.join("C:/Users/ferxas/Documents/python/chatbot-pymes/data/txt"))
+        self._ensure_text_directory()
+        self._ingest_text_files(self.text_dir)
 
-    def _ensure_pdf_directory(self):
+    def _ensure_text_directory(self):
         """
-        Verifica que el directorio `data/pdf` exista. Si no, lo crea.
+        Verifica que el directorio 'data/txt' exista. Si no, lanza un error.
         """
-        if not os.path.exists(self.pdf_dir):
-            os.makedirs(self.pdf_dir)
-            print(f"El directorio '{
-                  self.pdf_dir}' no existía, pero fue creado.")
-        elif not os.listdir(self.pdf_dir):
-            print(f"El directorio '{
-                  self.pdf_dir}' está vacío. Coloca documentos PDF aquí.")
+        if not os.path.exists(self.text_dir):
+            raise Exception(f"El directorio '{self.text_dir}' no existe. Crea la carpeta y coloca archivos .txt dentro.")
+        elif not os.listdir(self.text_dir):
+            raise Exception(f"El directorio '{self.text_dir}' está vacío. Coloca archivos .txt para procesar.")
 
     def _initialize_faiss_index(self):
         # Inicializa un índice FAISS vacío
@@ -52,30 +47,25 @@ class PredictionsResource(Resource):
         embedding = self.embedding_model.encode(text, convert_to_numpy=True)
         return embedding
 
-    def _ingest_pdf_documents(self, pdf_dir):
+    def _ingest_text_files(self, text_dir):
         """
-        Ingresa documentos PDF desde un directorio y actualiza el índice FAISS.
+        Lee todos los archivos .txt en el directorio y actualiza el índice FAISS.
         """
-        pdf_files = [f for f in os.listdir(pdf_dir) if f.endswith(".pdf")]
-        if not pdf_files:
-            raise Exception(f"No se encontraron archivos PDF en la carpeta '{pdf_dir}'.")
+        txt_files = [f for f in os.listdir(text_dir) if f.endswith(".txt")]
+        if not txt_files:
+            raise Exception(f"No se encontraron archivos .txt en la carpeta '{text_dir}'.")
 
-        for pdf_file in pdf_files:
-            file_path = os.path.join(pdf_dir, pdf_file)
-            with open(file_path, "rb") as f:
-                pdf_reader = PyPDF2.PdfReader(f)
-                # Extraer texto de todas las páginas
-                text = ""
-                for page in pdf_reader.pages:
-                    text += page.extract_text()
+        for txt_file in txt_files:
+            file_path = os.path.join(text_dir, txt_file)
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
 
-                # Dividir el texto en fragmentos más pequeños
-                fragments = self._split_text_into_chunks(text)
-                for fragment in fragments:
-                    embedding = self._embed_text(fragment)
-                    self.faiss_index.add(np.array([embedding]).astype("float32"))
-                    self.documents.append({"content": fragment, "source": pdf_file})
-
+            # Dividir el contenido en fragmentos manejables
+            fragments = self._split_text_into_chunks(content)
+            for fragment in fragments:
+                embedding = self._embed_text(fragment)
+                self.faiss_index.add(np.array([embedding]).astype("float32"))
+                self.documents.append({"content": fragment, "source": txt_file})
 
     def _split_text_into_chunks(self, text, chunk_size=500):
         """
@@ -99,7 +89,6 @@ class PredictionsResource(Resource):
         except Exception as e:
             # Capturar y devolver errores específicos
             return {"error": str(e)}, 500
-
 
     def _retrieve_relevant_documents(self, query):
         # Validar si FAISS tiene datos
@@ -128,12 +117,11 @@ class PredictionsResource(Resource):
         prompt = (
             f"Eres un asistente experto en estrategias de negocio para PYMEs. Basándote en la información de contexto proporcionada, proporciona soluciones prácticas, datos relevantes y recomendaciones personalizadas que ayuden a las pequeñas y medianas empresas a superar desafíos, aprovechar oportunidades y optimizar sus operaciones en áreas clave como la digitalización, la inteligencia artificial, el análisis de datos y la competitividad en el mercado:\n\n"
             f"{context}\n\n"
-            f"Responde de manera creativa y útil a la siguiente pregunta:\n{
-                query}"
+            f"Responde de manera creativa y útil a la siguiente pregunta:\n{query}"
         )
 
         response = openai.completions.create(
-            model="fine-tuned-model-id",  # Reemplazar con el ID de tu modelo fine-tuneado
+            model="",  # Reemplazar con el ID de tu modelo fine-tuneado
             prompt=prompt,
             max_tokens=300,
             temperature=0.7
